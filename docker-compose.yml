@@ -1,0 +1,122 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - api-gateway
+    environment:
+      - VITE_API_URL=http://localhost:3000
+      - VITE_AI_MODEL_ENDPOINT=http://localhost:5000/predict
+
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "3000:3000"
+    depends_on:
+      - auth-service
+      - user-service
+      - lawyer-service
+      - chat-service
+      - rating-service
+      - ai-model
+    environment:
+      - AUTH_SERVICE_URL=http://auth-service:3001
+      - USER_SERVICE_URL=http://user-service:3002
+      - LAWYER_SERVICE_URL=http://lawyer-service:3003
+      - CHAT_SERVICE_URL=http://chat-service:3004
+      - RATING_SERVICE_URL=http://rating-service:3005
+      - AI_MODEL_URL=http://ai-model:5000
+
+  auth-service:
+    build: ./services/auth
+    ports:
+      - "3001:3001"
+    depends_on:
+      - mysql
+    environment:
+      - DB_HOST=mysql
+      - DB_USER=root
+      - DB_PASS=
+      - DB_NAME=lawhelp
+      - JWT_SECRET=your_secret_key
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=587
+      - SMTP_USER=your-email@gmail.com
+      - SMTP_PASS=your-app-specific-password
+      - SMS_PROVIDER_API_KEY=your-sms-api-key
+
+  user-service:
+    build: ./services/user
+    ports:
+      - "3002:3002"
+    depends_on:
+      - mysql
+    environment:
+      - DB_HOST=mysql
+      - DB_USER=root
+      - DB_PASS=
+      - DB_NAME=lawhelp
+
+  lawyer-service:
+    build: ./services/lawyer
+    ports:
+      - "3003:3003"
+    depends_on:
+      - mysql
+    environment:
+      - DB_HOST=mysql
+      - DB_USER=root
+      - DB_PASS=
+      - DB_NAME=lawhelp
+
+  chat-service:
+    build: ./services/chat
+    ports:
+      - "3004:3004"
+    depends_on:
+      - mysql
+      - ai-model
+    environment:
+      - DB_HOST=mysql
+      - DB_USER=root
+      - DB_PASS=
+      - DB_NAME=lawhelp
+      - AI_MODEL_URL=http://ai-model:5000
+
+  rating-service:
+    build: ./services/rating
+    ports:
+      - "3005:3005"
+    depends_on:
+      - mysql
+    environment:
+      - DB_HOST=mysql
+      - DB_USER=root
+      - DB_PASS=
+      - DB_NAME=lawhelp
+
+  ai-model:
+    build: ./ai-model
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./ai-model:/app
+      - model-data:/app/models
+
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ALLOW_EMPTY_PASSWORD=yes
+      - MYSQL_DATABASE=lawhelp
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+
+volumes:
+  mysql-data:
+  model-data:

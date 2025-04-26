@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-primary: 67, 197, 158;
+    --color-primary-dark: 51, 150, 120;
+    --color-secondary: 61, 207, 255;
+    --color-secondary-dark: 61, 167, 205;
+    --color-accent: 93, 239, 255;
+    --color-green: 16, 185, 129;
+    --color-red: 239, 68, 68;
+    --color-background: 20, 69, 61;
+  }
+}
+
+body {
+  min-height: 100vh;
+  color: #2D7068;
+  background-color: #f8fafb;
+}
+
+.dark body {
+  color: #43C59E;
+  background-color: rgb(var(--color-background));
+}
+
+.prose img {
+  margin: 0 auto;
+}
+
+.prose a {
+  color: rgb(var(--color-primary));
+  text-decoration: underline;
+}
+
+/* Loading animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Custom button styles */
+.btn-primary {
+  @apply bg-primary hover:bg-primary-dark text-white font-medium rounded-lg transition-colors;
+}
+
+.btn-secondary {
+  @apply bg-[rgb(var(--color-secondary))] hover:bg-[rgb(var(--color-secondary-dark))] text-white font-medium rounded-lg transition-colors;
+}
+
+/* Form input styles */
+.input-field {
+  @apply px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent;
+}
+
+/* Card styles */
+.card {
+  @apply bg-white dark:bg-gray-800 rounded-xl shadow-md p-6;
+}
