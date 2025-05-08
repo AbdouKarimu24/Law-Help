@@ -8,6 +8,7 @@ const LoginForm: React.FC = () => {
   const [verificationCode, setVerificationCode] = useState('');
   const [error, setError] = useState('');
   const [showTwoFactorInput, setShowTwoFactorInput] = useState(false);
+  const [twoFactorMethod, setTwoFactorMethod] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -23,8 +24,9 @@ const LoginForm: React.FC = () => {
         
         if (response.requireTwoFactor) {
           setShowTwoFactorInput(true);
-          // In a real app, we would send a verification code via email/SMS
-          // For demo purposes, we'll just alert the user
+          setTwoFactorMethod(response.twoFactorMethod || '2fa_email');
+          
+          // In a real app, the code would be sent via email/SMS
           alert('For demo purposes: The verification code is 123456');
         }
       }
@@ -65,7 +67,9 @@ const LoginForm: React.FC = () => {
       </div>
       {showTwoFactorInput && (
         <div className="space-y-4">
-          <p className="text-sm text-gray-600 dark:text-gray-400">A verification code has been sent to your email</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            A verification code has been sent to your {twoFactorMethod === '2fa_email' ? 'email' : 'phone'}
+          </p>
           <div>
             <label htmlFor="verification-code" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Verification Code</label>
             <input 
@@ -75,6 +79,9 @@ const LoginForm: React.FC = () => {
               onChange={(e) => setVerificationCode(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-base bg-white dark:bg-gray-700 text-gray-800 dark:text-white" 
               required 
+              pattern="\d{6}"
+              title="Please enter the 6-digit verification code"
+              maxLength={6}
             />
           </div>
         </div>
