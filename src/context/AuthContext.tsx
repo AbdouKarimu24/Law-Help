@@ -5,9 +5,16 @@ import { AuthService } from '../services/auth';
 type AuthContextType = {
   currentUser: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<{ requireTwoFactor?: boolean; email?: string }>;
+  login: (email: string, password: string) => Promise<{ requireTwoFactor?: boolean; twoFactorMethod?: string; email?: string }>;
   verifyTwoFactor: (email: string, code: string) => Promise<void>;
-  register: (name: string, email: string, password: string, twoFactorEnabled: boolean) => Promise<void>;
+  register: (
+    name: string,
+    email: string,
+    password: string,
+    twoFactorEnabled: boolean,
+    twoFactorMethod: '2fa_email' | '2fa_sms',
+    phone?: string
+  ) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -50,7 +57,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const response = await authService.login(email, password);
       
       if (response.requireTwoFactor) {
-        return { requireTwoFactor: true, email };
+        return { 
+          requireTwoFactor: true, 
+          email,
+          twoFactorMethod: response.twoFactorMethod 
+        };
       }
       
       if (response.user) {
@@ -77,9 +88,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const register = async (name: string, email: string, password: string, twoFactorEnabled: boolean) => {
+  const register = async (
+    name: string,
+    email: string,
+    password: string,
+    twoFactorEnabled: boolean,
+    twoFactorMethod: '2fa_email' | '2fa_sms',
+    phone?: string
+  ) => {
     try {
-      await authService.register(name, email, password, twoFactorEnabled);
+      await authService.register(name, email, password, twoFactorEnabled, twoFactorMethod, phone);
     } catch (error) {
       throw error;
     }
