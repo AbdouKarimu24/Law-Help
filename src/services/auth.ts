@@ -8,13 +8,22 @@ export class AuthService {
     this.api = new ApiClient();
   }
 
-  async register(name: string, email: string, password: string, twoFactorEnabled: boolean): Promise<void> {
+  async register(
+    name: string, 
+    email: string, 
+    password: string, 
+    twoFactorEnabled: boolean,
+    twoFactorMethod: '2fa_email' | '2fa_sms',
+    phone?: string
+  ): Promise<void> {
     try {
       await this.api.request('/auth/register', 'POST', {
         name,
         email,
         password,
-        twoFactorEnabled
+        twoFactorEnabled,
+        twoFactorMethod,
+        phone
       });
     } catch (error) {
       throw error;
@@ -83,6 +92,8 @@ export class AuthService {
         email: 'user@example.com',
         password: 'password123',
         twoFactorEnabled: false,
+        twoFactorMethod: null,
+        phone: null,
         createdAt: new Date().toISOString()
       };
       
