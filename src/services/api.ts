@@ -1,4 +1,5 @@
 import { User, LoginResponse } from '../types';
+import { VerificationService } from './verification';
 
 export class ApiClient {
   private apiBaseUrl: string;
@@ -47,21 +48,44 @@ export class ApiClient {
     const users = JSON.parse(usersString);
     
     if (endpoint === '/auth/register' && method === 'POST') {
-      const { name, email, password, twoFactorEnabled } = data;
+      const { name, email, password, twoFactorEnabled, twoFactorMethod, phone } = data;
       
       if (users[email]) {
         throw new Error('Email already registered');
       }
       
+      if (twoFactorEnabled && twoFactorMethod === '2fa_sms' && !phone) {
+        throw new Error('Phone number is required for SMS verification');
+      }
+      
+      const userId = crypto.randomUUID();
+      
       users[email] = {
+        id: userId,
         name,
         email,
         password,
         twoFactorEnabled,
+        twoFactorMethod: twoFactorEnabled ? twoFactorMethod : null,
+        phone: twoFactorEnabled && twoFactorMethod === '2fa_sms' ? phone : null,
         createdAt: new Date().toISOString()
       };
       
       localStorage.setItem('legalChatUsers', JSON.stringify(users));
+
+      // Send verification code
+      if (twoFactorEnabled) {
+        try {
+          if (twoFactorMethod === '2fa_email') {
+            await VerificationService.sendEmailCode(userId, email);
+          } else if (twoFactorMethod === '2fa_sms') {
+            await VerificationService.sendSMSCode(userId, phone!);
+          }
+        } catch (error) {
+          console.error('Error sending verification code:', error);
+          throw new Error('Failed to send verification code');
+        }
+      }
       
       return { success: true, message: 'Registration successful' };
     }
@@ -79,9 +103,21 @@ export class ApiClient {
       
       // Check if 2FA is required
       if (users[email].twoFactorEnabled) {
+        try {
+          if (users[email].twoFactorMethod === '2fa_email') {
+            await VerificationService.sendEmailCode(users[email].id, email);
+          } else if (users[email].twoFactorMethod === '2fa_sms') {
+            await VerificationService.sendSMSCode(users[email].id, users[email].phone!);
+          }
+        } catch (error) {
+          console.error('Error sending verification code:', error);
+          throw new Error('Failed to send verification code');
+        }
+
         return { 
           success: true, 
           requireTwoFactor: true,
+          twoFactorMethod: users[email].twoFactorMethod,
           message: 'Two-factor authentication required'
         };
       }
@@ -93,9 +129,12 @@ export class ApiClient {
         success: true, 
         token,
         user: {
+          id: users[email].id,
           name: users[email].name,
           email: users[email].email,
-          twoFactorEnabled: users[email].twoFactorEnabled
+          phone: users[email].phone,
+          twoFactorEnabled: users[email].twoFactorEnabled,
+          twoFactorMethod: users[email].twoFactorMethod
         }
       };
     }
@@ -103,12 +142,16 @@ export class ApiClient {
     if (endpoint === '/auth/verify-2fa' && method === 'POST') {
       const { email, code } = data;
       
-      // In a real app, we would verify the code
-      // For this demo, we'll accept any 6-digit code
-      if (!/^\d{6}$/.test(code)) {
-        throw new Error('Invalid verification code');
+      const user = users[email];
+      if (!user) {
+        throw new Error('User not found');
       }
-      
+
+      const isValid = await VerificationService.verifyCode(user.id, code);
+      if (!isValid) {
+        throw new Error('Invalid or expired verification code');
+      }
+
       // Generate token (in a real app, this would be a JWT)
       const token = btoa(`${email}:${Date.now()}`);
       
@@ -116,9 +159,12 @@ export class ApiClient {
         success: true, 
         token,
         user: {
-          name: users[email].name,
-          email: users[email].email,
-          twoFactorEnabled: users[email].twoFactorEnabled
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          twoFactorEnabled: user.twoFactorEnabled,
+          twoFactorMethod: user.twoFactorMethod
         }
       };
     }
@@ -229,7 +275,9 @@ export class ApiClient {
         user: {
           name: users[currentUser.email].name,
           email: users[currentUser.email].email,
-          twoFactorEnabled: users[currentUser.email].twoFactorEnabled
+          phone: users[currentUser.email].phone,
+          twoFactorEnabled: users[currentUser.email].twoFactorEnabled,
+          twoFactorMethod: users[currentUser.email].twoFactorMethod
         }
       };
     }
@@ -251,13 +299,22 @@ export class ApiClient {
     }
     
     if (endpoint === '/user/update-2fa' && method === 'POST') {
-      const { enabled } = data;
+      const { enabled, method, phone } = data;
+      
+      if (enabled && method === '2fa_sms' && !phone) {
+        throw new Error('Phone number is required for SMS verification');
+      }
       
       users[currentUser.email].twoFactorEnabled = enabled;
+      users[currentUser.email].twoFactorMethod = enabled ? method : null;
+      users[currentUser.email].phone = enabled && method === '2fa_sms' ? phone : null;
+      
       localStorage.setItem('legalChatUsers', JSON.stringify(users));
       
       // Update current user
       currentUser.twoFactorEnabled = enabled;
+      currentUser.twoFactorMethod = enabled ? method : null;
+      currentUser.phone = enabled && method === '2fa_sms' ? phone : null;
       localStorage.setItem('currentUser', JSON.stringify(currentUser));
       
       return { 
