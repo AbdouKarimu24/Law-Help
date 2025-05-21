@@ -1,0 +1,59 @@
+---
+- name: Deploy LawHelp Infrastructure
+  hosts: all
+  become: true
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Install required packages
+      apt:
+        name:
+          - docker.io
+          - kubectl
+          - helm
+        state: present
+        update_cache: yes
+
+    - name: Add Kubernetes apt repository
+      apt_repository:
+        repo: deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main
+        state: present
+
+    - name: Install Kubernetes components
+      apt:
+        name:
+          - kubelet
+          - kubeadm
+          - kubectl
+        state: present
+
+    - name: Initialize Kubernetes cluster
+      command: kubeadm init --pod-network-cidr=10.244.0.0/16
+      args:
+        creates: /etc/kubernetes/admin.conf
+
+    - name: Install Calico network plugin
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('url', 'https://docs.projectcalico.org/manifests/calico.yaml') | from_yaml }}"
+
+    - name: Deploy Helm charts
+      kubernetes.core.helm:
+        name: lawhelp
+        chart_ref: ./helm
+        release_namespace: lawhelp
+        create_namespace: true
+        values: "{{ lookup('file', 'helm/values.yaml') | from_yaml }}"
+
+    - name: Deploy monitoring stack
+      kubernetes.core.helm:
+        name: monitoring
+        chart_ref: prometheus-community/kube-prometheus-stack
+        release_namespace: monitoring
+        create_namespace: true
+
+    - name: Configure backup jobs
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('template', 'templates/backup-cronjob.yaml') }}"
