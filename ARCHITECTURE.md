@@ -157,6 +157,158 @@ Grafana: http://monitoring.yourdomain.com
 Prometheus: http://prometheus.yourdomain.com
 ```
 
+
+## UML Diagrams
+
+### Class Diagram
+```mermaid
+classDiagram
+    User <|-- Lawyer
+    User <|-- Client
+    Lawyer "1" -- "*" Rating
+    Client "1" -- "*" ChatHistory
+    Lawyer "1" -- "*" ChatHistory
+    
+    class User {
+        +String id
+        +String name
+        +String email
+        +String password
+        +Boolean twoFactorEnabled
+        +String twoFactorMethod
+        +Date createdAt
+        +register()
+        +login()
+        +updateProfile()
+    }
+    
+    class Lawyer {
+        +String licenseNumber
+        +String specialization
+        +Number experienceYears
+        +String[] practiceAreas
+        +String[] languages
+        +String officeAddress
+        +applyAsLawyer()
+        +updateProfile()
+        +respondToChat()
+    }
+    
+    class Client {
+        +searchLawyers()
+        +rateLawyer()
+        +startChat()
+        +viewHistory()
+    }
+    
+    class Rating {
+        +Number rating
+        +String review
+        +Date createdAt
+        +create()
+        +update()
+    }
+    
+    class ChatHistory {
+        +String query
+        +String response
+        +Date timestamp
+        +save()
+        +retrieve()
+    }
+```
+
+### Sequence Diagram
+```mermaid
+sequenceDiagram
+    actor Client
+    participant Frontend
+    participant AuthService
+    participant ChatService
+    participant AIModel
+    
+    Client->>Frontend: Login Request
+    Frontend->>AuthService: Validate Credentials
+    AuthService-->>Frontend: Send 2FA Code
+    Frontend-->>Client: Request 2FA Code
+    Client->>Frontend: Submit 2FA Code
+    Frontend->>AuthService: Verify 2FA
+    AuthService-->>Frontend: Authentication Success
+    Frontend-->>Client: Login Complete
+    
+    Client->>Frontend: Send Legal Query
+    Frontend->>ChatService: Process Query
+    ChatService->>AIModel: Generate Response
+    AIModel-->>ChatService: AI Response
+    ChatService-->>Frontend: Formatted Response
+    Frontend-->>Client: Display Response
+```
+
+### Use Case Diagram
+```mermaid
+graph TD
+    subgraph "User Actions"
+        U1[Register Account]
+        U2[Login with 2FA]
+        U3[Update Profile]
+        U4[Search Lawyers]
+    end
+    
+    subgraph "Client Actions"
+        C1[Ask Legal Questions]
+        C2[Rate Lawyers]
+        C3[View Chat History]
+        C4[Book Consultation]
+    end
+    
+    subgraph "Lawyer Actions"
+        L1[Apply as Lawyer]
+        L2[Update Profile]
+        L3[Respond to Queries]
+        L4[Manage Schedule]
+    end
+    
+    subgraph "Admin Actions"
+        A1[Verify Lawyers]
+        A2[Monitor System]
+        A3[Manage Users]
+        A4[View Analytics]
+    end
+```
+
+### Communication Diagram
+```mermaid
+graph TD
+    subgraph "Frontend Layer"
+        UI[User Interface]
+        Auth[Auth Component]
+        Chat[Chat Component]
+    end
+    
+    subgraph "API Gateway"
+        Gateway[API Gateway]
+        LoadBalancer[Load Balancer]
+    end
+    
+    subgraph "Services Layer"
+        AuthSvc[Auth Service]
+        UserSvc[User Service]
+        ChatSvc[Chat Service]
+        AISvc[AI Service]
+    end
+    
+    UI <--> Auth
+    UI <--> Chat
+    Auth <--> Gateway
+    Chat <--> Gateway
+    Gateway <--> LoadBalancer
+    LoadBalancer <--> AuthSvc
+    LoadBalancer <--> UserSvc
+    LoadBalancer <--> ChatSvc
+    LoadBalancer <--> AISvc
+```
+
+
 ## Architecture Diagram
 
 ```mermaid
