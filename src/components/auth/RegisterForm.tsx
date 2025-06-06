@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 
+type RegisterResponse = {
+  totpQRCode?: string; // Added expected response field for the QR code
+};
+
 const RegisterForm: React.FC = () => {
   const { register } = useAuth();
   const [name, setName] = useState('');
@@ -8,7 +12,7 @@ const RegisterForm: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [enable2fa, setEnable2fa] = useState(false);
-  const [twoFactorMethod, setTwoFactorMethod] = useState<'2fa_email' | '2fa_totp'>('2fa_email');
+  const [twoFactorMethod, setTwoFactorMethod] = useState<'2fa_email' | '2fa_sms' | '2fa_totp'>('2fa_totp');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [totpQRCode, setTotpQRCode] = useState<string | null>(null);
@@ -25,22 +29,24 @@ const RegisterForm: React.FC = () => {
     setIsSubmitting(true);
     
     try {
-      const response = await register(name, email, password, enable2fa, twoFactorMethod);
+      // Calling the register function from AuthContext with relevant params
+      const response: RegisterResponse = await register(name, email, password, enable2fa, twoFactorMethod);
       
       if (response.totpQRCode) {
-        setTotpQRCode(response.totpQRCode);
+        setTotpQRCode(response.totpQRCode); // Set the QR code from the response
       } else {
-        alert('Account created successfully! Please check your email for verification code.');
+        alert('Account created successfully! Please check your email for a verification code.');
       }
       
-      // Reset form
+      // Reset form fields after successful registration
       setName('');
       setEmail('');
       setPassword('');
       setConfirmPassword('');
       setEnable2fa(false);
-      setTwoFactorMethod('2fa_email');
+      setTwoFactorMethod('2fa_totp');
     } catch (error) {
+      // Handle errors by setting the error message in state
       if (error instanceof Error) {
         setError(error.message);
       } else {
