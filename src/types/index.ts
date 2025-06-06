@@ -3,9 +3,9 @@ export interface User {
   id: number;
   name: string;
   email: string;
-  phone?: string;
   twoFactorEnabled: boolean;
-  twoFactorMethod: '2fa_email' | '2fa_sms' | null;
+  twoFactorMethod: '2fa_email' | '2fa_totp' | null;
+  totpSecret?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -15,7 +15,8 @@ export interface LoginResponse {
   token?: string;
   user?: User;
   requireTwoFactor?: boolean;
-  twoFactorMethod?: '2fa_email' | '2fa_sms';
+  twoFactorMethod?: '2fa_email' | '2fa_totp';
+  totpQRCode?: string;
   message?: string;
   email?: string;
 }
