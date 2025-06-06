@@ -40,15 +40,7 @@ function AppContent() {
     );
   }
 
-  return <MainContent />;
-}
-
-function MainContent() {
-  return (
-    <div id="app" className="min-h-screen flex flex-col">
-      <MainApp />
-    </div>
-  );
+  return <MainApp />;
 }
 
 export default App;

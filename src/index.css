@@ -49,6 +49,10 @@ body {
   animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+.animate-pulse .bg-primary {
+  background-color: rgb(var(--color-primary));
+}
+
 /* Custom button styles */
 .btn-primary {
   @apply bg-primary hover:bg-primary-dark text-white font-medium rounded-lg transition-colors;
