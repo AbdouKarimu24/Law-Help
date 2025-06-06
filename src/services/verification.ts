@@ -1,15 +1,10 @@
 import sgMail from '@sendgrid/mail';
-import twilio from 'twilio';
+import { authenticator } from 'otplib';
 import { createClient } from '@supabase/supabase-js';
+import QRCode from 'qrcode';
 
 // Initialize SendGrid
 sgMail.setApiKey(process.env.SENDGRID_API_KEY || '');
-
-// Initialize Twilio
-const twilioClient = twilio(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN
-);
 
 // Initialize Supabase
 const supabase = createClient(
@@ -30,11 +25,11 @@ interface VerificationAttempt {
 const attempts = new Map<string, VerificationAttempt>();
 
 export class VerificationService {
-  private static generateCode(): string {
+  private static generateEmailCode(): string {
     return Math.random().toString().slice(2, 8);
   }
 
-  private static async storeCode(userId: string, code: string): Promise<void> {
+  private static async storeEmailCode(userId: string, code: string): Promise<void> {
     const { error } = await supabase
       .from('verification_codes')
       .insert([
@@ -48,7 +43,7 @@ export class VerificationService {
     if (error) throw new Error('Failed to store verification code');
   }
 
-  private static async isCodeValid(userId: string, code: string): Promise<boolean> {
+  private static async isEmailCodeValid(userId: string, code: string): Promise<boolean> {
     const { data, error } = await supabase
       .from('verification_codes')
       .select('*')
@@ -61,7 +56,7 @@ export class VerificationService {
     return !!data;
   }
 
-  private static async deleteCode(userId: string): Promise<void> {
+  private static async deleteEmailCode(userId: string): Promise<void> {
     await supabase
       .from('verification_codes')
       .delete()
@@ -92,13 +87,36 @@ export class VerificationService {
     return true;
   }
 
+  static generateTOTPSecret(): string {
+    return authenticator.generateSecret();
+  }
+
+  static async generateTOTPQRCode(email: string, secret: string): Promise<string> {
+    const otpauth = authenticator.keyuri(email, 'LawHelp', secret);
+    try {
+      return await QRCode.toDataURL(otpauth);
+    } catch (error) {
+      console.error('Error generating QR code:', error);
+      throw new Error('Failed to generate QR code');
+    }
+  }
+
+  static verifyTOTP(token: string, secret: string): boolean {
+    try {
+      return authenticator.verify({ token, secret });
+    } catch (error) {
+      console.error('Error verifying TOTP:', error);
+      return false;
+    }
+  }
+
   static async sendEmailCode(userId: string, email: string): Promise<void> {
     if (!this.checkRateLimit(userId)) {
       throw new Error('Too many verification attempts. Please try again later.');
     }
 
-    const code = this.generateCode();
-    await this.storeCode(userId, code);
+    const code = this.generateEmailCode();
+    await this.storeEmailCode(userId, code);
 
     const msg = {
       to: email,
@@ -123,34 +141,14 @@ export class VerificationService {
     }
   }
 
-  static async sendSMSCode(userId: string, phone: string): Promise<void> {
+  static async verifyEmailCode(userId: string, code: string): Promise<boolean> {
     if (!this.checkRateLimit(userId)) {
       throw new Error('Too many verification attempts. Please try again later.');
     }
 
-    const code = this.generateCode();
-    await this.storeCode(userId, code);
-
-    try {
-      await twilioClient.messages.create({
-        body: `Your LawHelp verification code is: ${code}. This code will expire in 10 minutes.`,
-        to: phone,
-        from: process.env.TWILIO_PHONE_NUMBER
-      });
-    } catch (error) {
-      console.error('Error sending SMS:', error);
-      throw new Error('Failed to send verification code');
-    }
-  }
-
-  static async verifyCode(userId: string, code: string): Promise<boolean> {
-    if (!this.checkRateLimit(userId)) {
-      throw new Error('Too many verification attempts. Please try again later.');
-    }
-
-    const isValid = await this.isCodeValid(userId, code);
+    const isValid = await this.isEmailCodeValid(userId, code);
     if (isValid) {
-      await this.deleteCode(userId);
+      await this.deleteEmailCode(userId);
       attempts.delete(userId); // Reset attempts on successful verification
     }
 
