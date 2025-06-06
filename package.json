@@ -7,14 +7,20 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "metrics": "node metrics-server.js"
   },
   "dependencies": {
+    "@sendgrid/mail": "^8.1.0",
     "@supabase/supabase-js": "^2.39.7",
     "axios": "^1.6.7",
     "date-fns": "^3.3.1",
+    "express": "^4.18.2",
     "lucide-react": "^0.344.0",
     "marked": "^4.3.0",
+    "otplib": "^12.0.1",
+    "prom-client": "^15.1.0",
+    "qrcode": "^1.5.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-dropzone": "^14.2.3",
@@ -24,6 +30,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
+    "@types/qrcode": "^1.5.5",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@types/react-stars": "^2.2.4",
