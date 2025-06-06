@@ -1,5 +1,6 @@
 import { ApiClient } from './api';
 import { User, LoginResponse } from '../types';
+import { VerificationService } from './verification';
 
 export class AuthService {
   private api: ApiClient;
@@ -13,18 +14,27 @@ export class AuthService {
     email: string, 
     password: string, 
     twoFactorEnabled: boolean,
-    twoFactorMethod: '2fa_email' | '2fa_sms',
-    phone?: string
-  ): Promise<void> {
+    twoFactorMethod: '2fa_email' | '2fa_totp'
+  ): Promise<{ totpQRCode?: string }> {
     try {
+      let totpSecret: string | undefined;
+      let totpQRCode: string | undefined;
+
+      if (twoFactorEnabled && twoFactorMethod === '2fa_totp') {
+        totpSecret = VerificationService.generateTOTPSecret();
+        totpQRCode = await VerificationService.generateTOTPQRCode(email, totpSecret);
+      }
+
       await this.api.request('/auth/register', 'POST', {
         name,
         email,
         password,
         twoFactorEnabled,
         twoFactorMethod,
-        phone
+        totpSecret
       });
+
+      return { totpQRCode };
     } catch (error) {
       throw error;
     }
@@ -72,28 +82,23 @@ export class AuthService {
       this.api.clearAuthToken();
       localStorage.removeItem('currentUser');
     } catch (error) {
-      // Still clear auth data even if API call fails
       this.api.clearAuthToken();
       localStorage.removeItem('currentUser');
       throw error;
     }
   }
 
-  // Initialize default user for demo purposes
   initializeDefaultUser(): void {
     const usersString = localStorage.getItem('legalChatUsers');
     let users = usersString ? JSON.parse(usersString) : {};
     
-    // Check if default user exists
     if (!users['user@example.com']) {
-      // Create default user
       users['user@example.com'] = {
         name: 'Demo User',
         email: 'user@example.com',
         password: 'password123',
         twoFactorEnabled: false,
         twoFactorMethod: null,
-        phone: null,
         createdAt: new Date().toISOString()
       };
       
